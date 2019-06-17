@@ -29,17 +29,20 @@ func find_mesh(base: Node, mesh_name: String) -> MeshInstance:
 	return mi
 
 func update_modifier(value: float, modifier: String, slider: HSlider):
+	body_mi.hide()
+	body_mi.mesh = null
 	var val = value / 100.0
 	val = clamp(val, 0.0, 1.0)
-	maps[modifier].image.lock()
-	maps[modifier].image_normal.lock()
+	for k in maps.keys():
+		maps[k].image.lock()
+		maps[k].image_normal.lock()
 	maps[modifier].value = val
 	var surf : = 0
 	print(modifier, " ", val)
 	body_mesh = ArrayMesh.new()
 	for surface in range(orig_body_mesh.get_surface_count()):
 		var arrays: Array = orig_body_mesh.surface_get_arrays(surface).duplicate(true)
-		for index in arrays[ArrayMesh.ARRAY_INDEX]:
+		for index in range(arrays[ArrayMesh.ARRAY_VERTEX].size()):
 			var v: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][index]
 			var n: Vector3 = arrays[ArrayMesh.ARRAY_NORMAL][index]
 			var uv: Vector2 = arrays[ArrayMesh.ARRAY_TEX_UV][index]
@@ -52,12 +55,12 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 				var pdiff: Vector3 = Vector3(offset.r, offset.g, offset.b)
 				var ndiff: Vector3 = Vector3(offsetn.r, offsetn.g, offsetn.b)
 				for u in range(2):
-					diff[u] = (pdiff[u] * (max_point[u] - min_point[u]) + min_point[u]) * maps[k].value * 0.25
-					diffn[u] = (ndiff[u] * (max_normal[u] - min_normal[u]) + min_normal[u]) * maps[k].value * 0.25
+					diff[u] = (pdiff[u] * (max_point[u] - min_point[u]) + min_point[u]) * maps[k].value
+					diffn[u] = (ndiff[u] * (max_normal[u] - min_normal[u]) + min_normal[u]) * maps[k].value
 					if abs(diff[u]) < 0.0001:
 						diff[u] = 0
 				v -= diff
-#				n -= diffn
+				n -= diffn
 #			print(pdiff, " ", diff)
 			arrays[ArrayMesh.ARRAY_VERTEX][index] = v
 			arrays[ArrayMesh.ARRAY_NORMAL][index] = n
@@ -69,6 +72,7 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 	maps[modifier].image.unlock()
 	maps[modifier].image_normal.unlock()
 	body_mi.mesh = body_mesh
+	body_mi.show()
 func _ready():
 	var fd = File.new()
 	fd.open("res://config.bin", File.READ)

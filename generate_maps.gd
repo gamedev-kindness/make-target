@@ -221,7 +221,7 @@ func _process(delta):
 	elif shape == draw_data[surface].size():
 		shape = 0
 		surface += 1
-		draw_delay = 2.0
+		draw_delay = 1.0
 		$gen_maps/ProgressBar.value = 100.0
 	else:
 		$gen_maps/ProgressBar.value = 100.0 * shape / draw_data[surface].size()
@@ -232,7 +232,7 @@ func _process(delta):
 			save_viewport()
 			if $gen/drawable.normals:
 				shape += 1
-			draw_delay = 2.0
+			draw_delay = 1.0
 			print("shape ", shape)
 			if shape < draw_data[surface].size():
 				$gen/drawable.normals = !$gen/drawable.normals
