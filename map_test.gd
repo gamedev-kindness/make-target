@@ -36,9 +36,9 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 	maps[modifier].value = val
 	var surf : = 0
 	print(modifier, " ", val)
-	body_mesh = orig_body_mesh.duplicate(true)
-	for surface in range(body_mesh.get_surface_count()):
-		var arrays: Array = body_mesh.surface_get_arrays(surface)
+	body_mesh = ArrayMesh.new()
+	for surface in range(orig_body_mesh.get_surface_count()):
+		var arrays: Array = orig_body_mesh.surface_get_arrays(surface).duplicate(true)
 		for index in arrays[ArrayMesh.ARRAY_INDEX]:
 			var v: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][index]
 			var n: Vector3 = arrays[ArrayMesh.ARRAY_NORMAL][index]
@@ -64,8 +64,8 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 		body_mesh.add_surface_from_arrays(ArrayMesh.PRIMITIVE_TRIANGLES, arrays)
 		body_mesh.surface_set_material(surface, orig_body_mesh.surface_get_material(surface).duplicate(true))
 		surf += 1
-	for s in range(surf - 1, -1, -1):
-		body_mesh.surface_remove(s)
+#	for s in range(surf - 1, -1, -1):
+#		body_mesh.surface_remove(s)
 	maps[modifier].image.unlock()
 	maps[modifier].image_normal.unlock()
 	body_mi.mesh = body_mesh
