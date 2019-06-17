@@ -54,7 +54,7 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 				for u in range(2):
 					diff[u] = (pdiff[u] * (max_point[u] - min_point[u]) + min_point[u]) * maps[k].value * 0.25
 					diffn[u] = (ndiff[u] * (max_normal[u] - min_normal[u]) + min_normal[u]) * maps[k].value * 0.25
-					if abs(diff[u]) < 0.008:
+					if abs(diff[u]) < 0.0001:
 						diff[u] = 0
 				v -= diff
 #				n -= diffn
