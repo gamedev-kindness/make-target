@@ -73,17 +73,12 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 	maps[modifier].image_normal.unlock()
 	body_mi.mesh = body_mesh
 	body_mi.show()
-func _ready():
-	var fd = File.new()
-	fd.open("res://config.bin", File.READ)
-	min_point = fd.get_var()
-	max_point = fd.get_var()
-	min_normal = fd.get_var()
-	max_normal = fd.get_var()
-	maps = fd.get_var()
-	fd.close()
-	print("min: ", min_point, " max: ", max_point)
-	var ch = characters[0].instance()
+var ch: Node
+func prepare_character(x:int) -> void:
+	if ch != null:
+		remove_child(ch)
+		ch.queue_free()
+	ch = characters[x].instance()
 	add_child(ch)
 	ch.rotation.y = PI
 	for k in maps.keys():
@@ -95,6 +90,21 @@ func _ready():
 	body_mi = find_mesh(ch, "body")
 	body_mesh = body_mi.mesh.duplicate(true)
 	orig_body_mesh = body_mi.mesh.duplicate(true)
+func button_female():
+	prepare_character(0)
+func button_male():
+	prepare_character(1)
+func _ready():
+	var fd = File.new()
+	fd.open("res://config.bin", File.READ)
+	min_point = fd.get_var()
+	max_point = fd.get_var()
+	min_normal = fd.get_var()
+	max_normal = fd.get_var()
+	maps = fd.get_var()
+	fd.close()
+	print("min: ", min_point, " max: ", max_point)
+	prepare_character(0)
 	
 	assert body_mesh
 	for k in maps.keys():
@@ -104,6 +114,8 @@ func _ready():
 		slider.connect("value_changed", self, "update_modifier", [k, slider])
 		slider.focus_mode = Control.FOCUS_CLICK
 		$VBoxContainer.add_child(Button.new())
+	$VBoxContainer/button_female.connect("pressed", self, "button_female")
+	$VBoxContainer/button_male.connect("pressed", self, "button_male")
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 #func _process(delta):
 #	pass
