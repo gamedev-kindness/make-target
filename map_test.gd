@@ -62,6 +62,7 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 			arrays[ArrayMesh.ARRAY_VERTEX][index] = v
 			arrays[ArrayMesh.ARRAY_NORMAL][index] = n
 		body_mesh.add_surface_from_arrays(ArrayMesh.PRIMITIVE_TRIANGLES, arrays)
+		body_mesh.surface_set_material(surface, orig_body_mesh.surface_get_material(surface).duplicate(true))
 		surf += 1
 	for s in range(surf - 1, -1, -1):
 		body_mesh.surface_remove(s)
