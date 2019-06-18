@@ -11,6 +11,7 @@ var min_normal = Vector3()
 var max_normal = Vector3()
 var maps = {}
 
+
 func find_mesh(base: Node) -> ArrayMesh:
 	var queue = [base]
 	var am: ArrayMesh

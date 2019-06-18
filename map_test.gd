@@ -15,6 +15,20 @@ var max_point: Vector3 = Vector3()
 var min_normal: Vector3 = Vector3()
 var max_normal: Vector3 = Vector3()
 var maps = {}
+var vert_indices = {}
+func find_same_verts():
+	for surface in range(orig_body_mesh.get_surface_count()):
+		var arrays: Array = orig_body_mesh.surface_get_arrays(surface).duplicate(true)
+		for index1 in range(arrays[ArrayMesh.ARRAY_VERTEX].size()):
+			var v1: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][index1]
+			var ok = false
+			for rk in vert_indices.keys():
+				if (v1 - rk).length() < 0.001:
+					ok = true
+					vert_indices[rk].push_back(index1)
+			if !ok:
+				vert_indices[v1] = [index1]
+
 func find_mesh(base: Node, mesh_name: String) -> MeshInstance:
 	var queue = [base]
 	var mi: MeshInstance
@@ -27,7 +41,6 @@ func find_mesh(base: Node, mesh_name: String) -> MeshInstance:
 		for c in item.get_children():
 			queue.push_back(c)
 	return mi
-
 func update_modifier(value: float, modifier: String, slider: HSlider):
 	body_mi.hide()
 	body_mi.mesh = null
@@ -63,7 +76,16 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 				n -= diffn
 #			print(pdiff, " ", diff)
 			arrays[ArrayMesh.ARRAY_VERTEX][index] = v
-			arrays[ArrayMesh.ARRAY_NORMAL][index] = n
+			arrays[ArrayMesh.ARRAY_NORMAL][index] = n.normalized()
+		for v in vert_indices.keys():
+			if vert_indices[v].size() <= 1:
+				continue
+			var vx: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][vert_indices[v][0]]
+			for idx in range(1, vert_indices[v].size()):
+				vx = vx.linear_interpolate(arrays[ArrayMesh.ARRAY_VERTEX][vert_indices[v][idx]], 0.5)
+			for idx in vert_indices[v]:
+				arrays[ArrayMesh.ARRAY_VERTEX][idx] = vx
+			
 		body_mesh.add_surface_from_arrays(ArrayMesh.PRIMITIVE_TRIANGLES, arrays)
 		body_mesh.surface_set_material(surface, orig_body_mesh.surface_get_material(surface).duplicate(true))
 		surf += 1
@@ -74,7 +96,7 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 	body_mi.mesh = body_mesh
 	body_mi.show()
 var ch: Node
-func prepare_character(x:int) -> void:
+func prepare_character(x: int) -> void:
 	if ch != null:
 		remove_child(ch)
 		ch.queue_free()
@@ -90,6 +112,7 @@ func prepare_character(x:int) -> void:
 	body_mi = find_mesh(ch, "body")
 	body_mesh = body_mi.mesh.duplicate(true)
 	orig_body_mesh = body_mi.mesh.duplicate(true)
+	find_same_verts()
 func button_female():
 	prepare_character(0)
 func button_male():
