@@ -1,0 +1,35 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://main_menu.gd" type="Script" id=1]
+
+[node name="main" type="Control"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+script = ExtResource( 1 )
+__meta__ = {
+"_edit_use_anchors_": true
+}
+
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = -20.0
+margin_top = -20.0
+margin_right = 103.0
+margin_bottom = 24.0
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="generate_run" type="Button" parent="VBoxContainer"]
+margin_right = 123.0
+margin_bottom = 20.0
+text = "Generate and run"
+
+[node name="run" type="Button" parent="VBoxContainer"]
+margin_top = 24.0
+margin_right = 123.0
+margin_bottom = 44.0
+text = "Run"

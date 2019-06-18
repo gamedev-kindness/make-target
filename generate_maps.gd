@@ -10,7 +10,40 @@ var max_point = Vector3()
 var min_normal = Vector3()
 var max_normal = Vector3()
 var maps = {}
+var vert_indices = {}
 
+onready var characters = [load("res://characters/female_2018.escn"), load("res://characters/male_2018.escn")]
+
+func find_mesh_name(base: Node, mesh_name: String) -> MeshInstance:
+	var queue = [base]
+	var mi: MeshInstance
+	while queue.size() > 0:
+		var item = queue[0]
+		queue.pop_front()
+		if item is MeshInstance && item.name == mesh_name:
+			mi = item
+			break
+		for c in item.get_children():
+			queue.push_back(c)
+	return mi
+
+func find_same_verts():
+	for chdata in range(characters.size()):
+		var ch_scene = characters[chdata].instance()
+		var bmesh = find_mesh_name(ch_scene, "body")
+		if !vert_indices.has(chdata):
+			vert_indices[chdata] = {}
+		for surface in range(bmesh.mesh.get_surface_count()):
+			var arrays: Array = bmesh.mesh.surface_get_arrays(surface).duplicate(true)
+			for index1 in range(arrays[ArrayMesh.ARRAY_VERTEX].size()):
+				var v1: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][index1]
+				var ok = false
+				for rk in vert_indices[chdata].keys():
+					if (v1 - rk).length() < 0.001:
+						ok = true
+						vert_indices[chdata][rk].push_back(index1)
+				if !ok:
+					vert_indices[chdata][v1] = [index1]
 
 func find_mesh(base: Node) -> ArrayMesh:
 	var queue = [base]
@@ -210,6 +243,8 @@ func _process(delta):
 			exit_delay -= delta
 			print(exit_delay)
 		else:
+			print("generating same vert indices...")
+			find_same_verts()
 			var fd = File.new()
 			fd.open("res://config.bin", File.WRITE)
 			fd.store_var(min_point)
@@ -217,8 +252,9 @@ func _process(delta):
 			fd.store_var(min_normal)
 			fd.store_var(max_normal)
 			fd.store_var(maps)
+			fd.store_var(vert_indices)
 			fd.close()
-			get_tree().quit()
+			get_tree().change_scene("res://map_test.tscn")
 	elif shape == draw_data[surface].size():
 		shape = 0
 		surface += 1

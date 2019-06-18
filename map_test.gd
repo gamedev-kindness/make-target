@@ -16,18 +16,24 @@ var min_normal: Vector3 = Vector3()
 var max_normal: Vector3 = Vector3()
 var maps = {}
 var vert_indices = {}
-func find_same_verts():
-	for surface in range(orig_body_mesh.get_surface_count()):
-		var arrays: Array = orig_body_mesh.surface_get_arrays(surface).duplicate(true)
-		for index1 in range(arrays[ArrayMesh.ARRAY_VERTEX].size()):
-			var v1: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][index1]
-			var ok = false
-			for rk in vert_indices.keys():
-				if (v1 - rk).length() < 0.001:
-					ok = true
-					vert_indices[rk].push_back(index1)
-			if !ok:
-				vert_indices[v1] = [index1]
+var _vert_indices = {}
+#func find_same_verts():
+#	for chdata in characters:
+#		var ch_scene = chdata.instance()
+#		var bmesh = find_mesh(ch_scene, "body")
+#		if !vert_indices.has(chdata):
+#			vert_indices[chdata] = {}
+#		for surface in range(bmesh.mesh.get_surface_count()):
+#			var arrays: Array = bmesh.mesh.surface_get_arrays(surface).duplicate(true)
+#			for index1 in range(arrays[ArrayMesh.ARRAY_VERTEX].size()):
+#				var v1: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][index1]
+#				var ok = false
+#				for rk in vert_indices[chdata].keys():
+#					if (v1 - rk).length() < 0.001:
+#						ok = true
+#						vert_indices[chdata][rk].push_back(index1)
+#				if !ok:
+#					vert_indices[chdata][v1] = [index1]
 
 func find_mesh(base: Node, mesh_name: String) -> MeshInstance:
 	var queue = [base]
@@ -77,13 +83,13 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 #			print(pdiff, " ", diff)
 			arrays[ArrayMesh.ARRAY_VERTEX][index] = v
 			arrays[ArrayMesh.ARRAY_NORMAL][index] = n.normalized()
-		for v in vert_indices.keys():
-			if vert_indices[v].size() <= 1:
+		for v in _vert_indices.keys():
+			if _vert_indices[v].size() <= 1:
 				continue
-			var vx: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][vert_indices[v][0]]
-			for idx in range(1, vert_indices[v].size()):
-				vx = vx.linear_interpolate(arrays[ArrayMesh.ARRAY_VERTEX][vert_indices[v][idx]], 0.5)
-			for idx in vert_indices[v]:
+			var vx: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][_vert_indices[v][0]]
+			for idx in range(1, _vert_indices[v].size()):
+				vx = vx.linear_interpolate(arrays[ArrayMesh.ARRAY_VERTEX][_vert_indices[v][idx]], 0.5)
+			for idx in _vert_indices[v]:
 				arrays[ArrayMesh.ARRAY_VERTEX][idx] = vx
 			
 		body_mesh.add_surface_from_arrays(ArrayMesh.PRIMITIVE_TRIANGLES, arrays)
@@ -112,7 +118,7 @@ func prepare_character(x: int) -> void:
 	body_mi = find_mesh(ch, "body")
 	body_mesh = body_mi.mesh.duplicate(true)
 	orig_body_mesh = body_mi.mesh.duplicate(true)
-	find_same_verts()
+	_vert_indices = vert_indices[x]
 func button_female():
 	prepare_character(0)
 func button_male():
@@ -125,20 +131,30 @@ func _ready():
 	min_normal = fd.get_var()
 	max_normal = fd.get_var()
 	maps = fd.get_var()
+	vert_indices = fd.get_var()
 	fd.close()
 	print("min: ", min_point, " max: ", max_point)
-	prepare_character(0)
 	
-	assert body_mesh
-	for k in maps.keys():
-		var slider = HSlider.new()
-		slider.rect_min_size = Vector2(180, 30)
-		$VBoxContainer.add_child(slider)
-		slider.connect("value_changed", self, "update_modifier", [k, slider])
-		slider.focus_mode = Control.FOCUS_CLICK
-		$VBoxContainer.add_child(Button.new())
-	$VBoxContainer/button_female.connect("pressed", self, "button_female")
-	$VBoxContainer/button_male.connect("pressed", self, "button_male")
-# Called every frame. 'delta' is the elapsed time since the previous frame.
-#func _process(delta):
-#	pass
+var state : = 0
+func _process(delta):
+	match(state):
+		0:
+#			$Panel.show()
+			state = 1
+		1:
+#			find_same_verts()
+			prepare_character(0)
+			state = 2
+		2:
+#			$Panel.hide()
+			assert body_mesh
+			for k in maps.keys():
+				var slider = HSlider.new()
+				slider.rect_min_size = Vector2(180, 30)
+				$VBoxContainer.add_child(slider)
+				slider.connect("value_changed", self, "update_modifier", [k, slider])
+				slider.focus_mode = Control.FOCUS_CLICK
+				$VBoxContainer.add_child(Button.new())
+			$VBoxContainer/button_female.connect("pressed", self, "button_female")
+			$VBoxContainer/button_male.connect("pressed", self, "button_male")
+			state = 3
