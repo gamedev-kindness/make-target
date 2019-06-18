@@ -1,1 +1,5 @@
 .import
+config.bin
+normal_*.png*
+*.blend[0-9]*
+
