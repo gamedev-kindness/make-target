@@ -8,13 +8,21 @@ extends Camera
 func _ready():
 	pass # Replace with function body.
 
+var drag: bool = false
+var motion : = Vector2()
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
-	if Input.is_action_pressed("ui_up"):
-		translation -= transform.basis.z * 5.0 * delta
-	if Input.is_action_pressed("ui_down"):
-		translation += transform.basis.z * 5.0 * delta
-	if Input.is_action_pressed("ui_left"):
-		get_parent().rotate_y(-delta)
-	if Input.is_action_pressed("ui_right"):
-		get_parent().rotate_y(delta)
+	if motion.length() > 1.0:
+		translation -= transform.basis.z * 1.5 * motion.y * delta
+		get_parent().rotate_y(motion.x * 0.9 * delta)
+		motion = Vector2()
+
+func _unhandled_input(event):
+	if event is InputEventMouseButton:
+		if event.button_index == 1 && event.is_pressed():
+			drag = true
+		elif event.button_index == 1 && !event.is_pressed():
+			drag = false
+	elif event is InputEventMouseMotion:
+		if drag:
+			motion += event.relative

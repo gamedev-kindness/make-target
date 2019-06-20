@@ -17,23 +17,7 @@ var max_normal: Vector3 = Vector3()
 var maps = {}
 var vert_indices = {}
 var _vert_indices = {}
-#func find_same_verts():
-#	for chdata in characters:
-#		var ch_scene = chdata.instance()
-#		var bmesh = find_mesh(ch_scene, "body")
-#		if !vert_indices.has(chdata):
-#			vert_indices[chdata] = {}
-#		for surface in range(bmesh.mesh.get_surface_count()):
-#			var arrays: Array = bmesh.mesh.surface_get_arrays(surface).duplicate(true)
-#			for index1 in range(arrays[ArrayMesh.ARRAY_VERTEX].size()):
-#				var v1: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][index1]
-#				var ok = false
-#				for rk in vert_indices[chdata].keys():
-#					if (v1 - rk).length() < 0.001:
-#						ok = true
-#						vert_indices[chdata][rk].push_back(index1)
-#				if !ok:
-#					vert_indices[chdata][v1] = [index1]
+var controls = {}
 
 func find_mesh(base: Node, mesh_name: String) -> MeshInstance:
 	var queue = [base]
@@ -47,7 +31,7 @@ func find_mesh(base: Node, mesh_name: String) -> MeshInstance:
 		for c in item.get_children():
 			queue.push_back(c)
 	return mi
-func update_modifier(value: float, modifier: String, slider: HSlider):
+func update_modifier(value: float, modifier: String):
 	body_mi.hide()
 	body_mi.mesh = null
 	var val = value / 100.0
@@ -95,12 +79,20 @@ func update_modifier(value: float, modifier: String, slider: HSlider):
 		body_mesh.add_surface_from_arrays(ArrayMesh.PRIMITIVE_TRIANGLES, arrays)
 		body_mesh.surface_set_material(surface, orig_body_mesh.surface_get_material(surface).duplicate(true))
 		surf += 1
-#	for s in range(surf - 1, -1, -1):
-#		body_mesh.surface_remove(s)
 	maps[modifier].image.unlock()
 	maps[modifier].image_normal.unlock()
 	body_mi.mesh = body_mesh
 	body_mi.show()
+func update_slider(value: float, control: String, slider: HSlider):
+	var modifier = ""
+	if value >= 0:
+		modifier = controls[control].plus
+		maps[controls[control].minus].value = 0.0
+	else:
+		value = -value
+		modifier = controls[control].minus
+		maps[controls[control].plus].value = 0.0
+	update_modifier(value, modifier)
 var ch: Node
 func prepare_character(x: int) -> void:
 	if ch != null:
@@ -136,6 +128,38 @@ func _ready():
 	print("min: ", min_point, " max: ", max_point)
 	
 var state : = 0
+func build_contols():
+	for k in maps.keys():
+		if k.ends_with("_plus"):
+			var cname = k.replace("_plus", "")
+			if !controls.has(cname):
+				controls[cname] = {}
+			controls[cname].plus = k
+		elif k.ends_with("_minus"):
+			var cname = k.replace("_minus", "")
+			if !controls.has(cname):
+				controls[cname] = {}
+			controls[cname].minus = k
+		else:
+			var cname = k
+			controls[cname] = {}
+			controls[cname].plus = k
+	for k in controls.keys():
+		var l = Label.new()
+		l.text = k
+		$s/VBoxContainer.add_child(l)
+		var slider : = HSlider.new()
+		slider.rect_min_size = Vector2(180, 30)
+		if controls[k].plus && controls[k].minus:
+			slider.min_value = -100
+			slider.max_value = 100
+		else:
+			slider.min_value = 0
+			slider.max_value = 100
+		$s/VBoxContainer.add_child(slider)
+		slider.connect("value_changed", self, "update_slider", [k, slider])
+		slider.focus_mode = Control.FOCUS_CLICK
+			
 func _process(delta):
 	match(state):
 		0:
@@ -148,13 +172,7 @@ func _process(delta):
 		2:
 #			$Panel.hide()
 			assert body_mesh
-			for k in maps.keys():
-				var slider = HSlider.new()
-				slider.rect_min_size = Vector2(180, 30)
-				$VBoxContainer.add_child(slider)
-				slider.connect("value_changed", self, "update_modifier", [k, slider])
-				slider.focus_mode = Control.FOCUS_CLICK
-				$VBoxContainer.add_child(Button.new())
-			$VBoxContainer/button_female.connect("pressed", self, "button_female")
-			$VBoxContainer/button_male.connect("pressed", self, "button_male")
+			build_contols()
+			$s/VBoxContainer/button_female.connect("pressed", self, "button_female")
+			$s/VBoxContainer/button_male.connect("pressed", self, "button_male")
 			state = 3
