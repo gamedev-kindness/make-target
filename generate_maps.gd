@@ -251,16 +251,13 @@ func save_viewport(shape_name: String):
 	var fn = ""
 	if !maps.has(shape_name):
 		maps[shape_name] = {}
+		maps[shape_name].width = tex_img.get_width()
+		maps[shape_name].height = tex_img.get_height()
+		maps[shape_name].format = tex_img.get_format()
 	if $gen/drawable.normals:
-		fn = "res://normal_" + shape_name + "_" + str(surface) + ".png"
-		maps[shape_name].fn_normal = fn
 		maps[shape_name].image_normal_data = tex_img.duplicate(true).get_data()
 	else:
-		fn = "res://normal_" + shape_name + "_" + str(surface) + ".png"
-		maps[shape_name].fn = fn
 		maps[shape_name].image_data = tex_img.duplicate(true).get_data()
-		maps[shape_name].format = tex_img.get_format()
-	tex_img.save_png(fn)
 
 func _process(delta):
 	if surface == draw_data.size():

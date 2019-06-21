@@ -9,7 +9,6 @@ onready var characters = [load("res://characters/female_2018.escn"), load("res:/
 var body_mi: MeshInstance
 var body_mesh: ArrayMesh
 var orig_body_mesh: ArrayMesh
-const TEX_SIZE = 512
 var min_point: Vector3 = Vector3()
 var max_point: Vector3 = Vector3()
 var min_normal: Vector3 = Vector3()
@@ -49,10 +48,10 @@ func update_modifier(value: float, modifier: String):
 			var v: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][index]
 			var n: Vector3 = arrays[ArrayMesh.ARRAY_NORMAL][index]
 			var uv: Vector2 = arrays[ArrayMesh.ARRAY_TEX_UV][index]
-			var pos: Vector2 = uv * TEX_SIZE
 			var diff : = Vector3()
 			var diffn : = Vector3()
 			for k in maps.keys():
+				var pos: Vector2 = Vector2(uv.x * maps[k].width, uv.y * maps[k].height)
 				var offset: Color = maps[k].image.get_pixelv(pos)
 				var offsetn: Color = maps[k].image_normal.get_pixelv(pos)
 				var pdiff: Vector3 = Vector3(offset.r, offset.g, offset.b)
@@ -103,9 +102,9 @@ func prepare_character(x: int) -> void:
 	ch.rotation.y = PI
 	for k in maps.keys():
 		maps[k].image_normal = Image.new()
-		maps[k].image_normal.create_from_data(TEX_SIZE, TEX_SIZE, false, maps[k].format, maps[k].image_normal_data)
+		maps[k].image_normal.create_from_data(maps[k].width, maps[k].height, false, maps[k].format, maps[k].image_normal_data)
 		maps[k].image = Image.new()
-		maps[k].image.create_from_data(TEX_SIZE, TEX_SIZE, false, maps[k].format, maps[k].image_data)
+		maps[k].image.create_from_data(maps[k].width, maps[k].height, false, maps[k].format, maps[k].image_data)
 		maps[k].value = 0.0
 	body_mi = find_mesh(ch, "body")
 	body_mesh = body_mi.mesh.duplicate(true)
