@@ -1,10 +1,5 @@
 extends Spatial
 
-# Declare member variables here. Examples:
-# var a = 2
-# var b = "text"
-
-# Called when the node enters the scene tree for the first time.
 onready var characters = [load("res://characters/female_2018.escn"), load("res://characters/male_2018.escn")]
 var body_mi: MeshInstance
 var body_mesh: ArrayMesh
@@ -42,28 +37,38 @@ func update_modifier(value: float, modifier: String):
 	var surf : = 0
 	print(modifier, " ", val)
 	body_mesh = ArrayMesh.new()
+	var mrect: Rect2
+	for k in maps.keys():
+		if maps[k].value > 0.0001:
+			if mrect:
+				mrect = mrect.merge(maps[k].rect)
+			else:
+				mrect = maps[k].rect
 	for surface in range(orig_body_mesh.get_surface_count()):
-		var arrays: Array = orig_body_mesh.surface_get_arrays(surface).duplicate(true)
+		var arrays: Array = orig_body_mesh.surface_get_arrays(surface)
 		for index in range(arrays[ArrayMesh.ARRAY_VERTEX].size()):
 			var v: Vector3 = arrays[ArrayMesh.ARRAY_VERTEX][index]
 			var n: Vector3 = arrays[ArrayMesh.ARRAY_NORMAL][index]
 			var uv: Vector2 = arrays[ArrayMesh.ARRAY_TEX_UV][index]
+			if !mrect.has_point(uv):
+				continue
 			var diff : = Vector3()
 			var diffn : = Vector3()
 			for k in maps.keys():
+				if !maps[k].rect.has_point(uv) || abs(maps[k].value) < 0.0001:
+					continue
 				var pos: Vector2 = Vector2(uv.x * maps[k].width, uv.y * maps[k].height)
 				var offset: Color = maps[k].image.get_pixelv(pos)
 				var offsetn: Color = maps[k].image_normal.get_pixelv(pos)
 				var pdiff: Vector3 = Vector3(offset.r, offset.g, offset.b)
 				var ndiff: Vector3 = Vector3(offsetn.r, offsetn.g, offsetn.b)
 				for u in range(2):
-					diff[u] = (pdiff[u] * (max_point[u] - min_point[u]) + min_point[u]) * maps[k].value
-					diffn[u] = (ndiff[u] * (max_normal[u] - min_normal[u]) + min_normal[u]) * maps[k].value
+					diff[u] = range_lerp(pdiff[u], 0.0, 1.0, min_point[u], max_point[u]) * maps[k].value
+					diffn[u] = range_lerp(ndiff[u], 0.0, 1.0, min_normal[u], max_normal[u]) * maps[k].value
 					if abs(diff[u]) < 0.0001:
 						diff[u] = 0
 				v -= diff
 				n -= diffn
-#			print(pdiff, " ", diff)
 			arrays[ArrayMesh.ARRAY_VERTEX][index] = v
 			arrays[ArrayMesh.ARRAY_NORMAL][index] = n.normalized()
 		for v in _vert_indices.keys():
@@ -78,8 +83,9 @@ func update_modifier(value: float, modifier: String):
 		body_mesh.add_surface_from_arrays(ArrayMesh.PRIMITIVE_TRIANGLES, arrays)
 		body_mesh.surface_set_material(surface, orig_body_mesh.surface_get_material(surface).duplicate(true))
 		surf += 1
-	maps[modifier].image.unlock()
-	maps[modifier].image_normal.unlock()
+	for k in maps.keys():
+		maps[k].image.unlock()
+		maps[k].image_normal.unlock()
 	body_mi.mesh = body_mesh
 	body_mi.show()
 func update_slider(value: float, control: String, slider: HSlider):
@@ -125,6 +131,8 @@ func _ready():
 	vert_indices = fd.get_var()
 	fd.close()
 	print("min: ", min_point, " max: ", max_point)
+	for k in maps.keys():
+		print(k, ": ", maps[k].rect)
 	
 var state : = 0
 func build_contols():
@@ -162,16 +170,13 @@ func build_contols():
 func _process(delta):
 	match(state):
 		0:
-#			$Panel.show()
-			state = 1
-		1:
 #			find_same_verts()
 			prepare_character(0)
-			state = 2
-		2:
+			state = 1
+		1:
 #			$Panel.hide()
 			assert body_mesh
 			build_contols()
 			$s/VBoxContainer/button_female.connect("pressed", self, "button_female")
 			$s/VBoxContainer/button_male.connect("pressed", self, "button_male")
-			state = 3
+			state = 2

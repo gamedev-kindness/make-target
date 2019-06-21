@@ -108,7 +108,7 @@ func pad_morphs(morphs: Dictionary, nshapes: Dictionary):
 							var ew = morphs[mesh][m][t][v].shape[s][u] * cd + min_point[u]
 							assert abs(ew - d) < 0.001
 							morphs[mesh][m][t][v].normal[s][u] = (morphs[mesh][m][t][v].normal[s][u] - min_normal[u]) / ncd
-func fill_draw_data(morphs: Dictionary, draw_data: Dictionary, morph_names: Dictionary, nshapes: Dictionary):
+func fill_draw_data(morphs: Dictionary, draw_data: Dictionary, morph_names: Dictionary, nshapes: Dictionary, rects: Dictionary):
 	var offset : = 0
 	for mesh in morphs.keys():
 		for m in morphs[mesh].keys():
@@ -117,7 +117,7 @@ func fill_draw_data(morphs: Dictionary, draw_data: Dictionary, morph_names: Dict
 			var ns = nshapes[mesh][m]
 			for sh in range(ns):
 				print(morph_names[mesh][m][sh], ": ", m, " ", sh + offset)
-				draw_data[m][sh + offset] = {"name": morph_names[mesh][m][sh], "triangles": []}
+				draw_data[m][sh + offset] = {"name": morph_names[mesh][m][sh], "triangles": [], "rects": []}
 				for t in range(morphs[mesh][m].size()):
 					var tri : = []
 					var midp = Vector2()
@@ -131,6 +131,7 @@ func fill_draw_data(morphs: Dictionary, draw_data: Dictionary, morph_names: Dict
 						var dpt = pt.normalized() * (3.5 / TEX_SIZE)
 						tri.push_back({"uv": morphs[mesh][m][t][v].uv + dpt, "shape": morphs[mesh][m][t][v].shape[sh], "normal": morphs[mesh][m][t][v].normal[sh]})
 					draw_data[m][sh + offset].triangles.push_back(tri)
+				draw_data[m][sh + offset].rect = rects[mesh][m][sh]
 			offset += draw_data[m].keys().size()
 
 var common = [load("res://characters/common_part1.escn"), load("res://characters/common_part2.escn")]
@@ -138,6 +139,7 @@ func _ready():
 	var morphs = {}
 	var mesh_data = {}
 	var nshapes = {}
+	var rects = {}
 	for mesh_no  in range(common.size()):
 		var skipped : = 0
 		var ntriangles : = 0
@@ -151,10 +153,12 @@ func _ready():
 			morphs[mesh_no] = {}
 			mesh_data[mesh_no] = {}
 			nshapes[mesh_no] = {}
+			rects[mesh_no] = {}
 		for sc in range(mesh.get_surface_count()):
 			if !morphs[mesh_no].has(sc):
 				morphs[mesh_no][sc] = []
 				mesh_data[mesh_no][sc] = []
+				rects[mesh_no][sc] = {}
 			var bshapes: Array = mesh.surface_get_blend_shape_arrays(sc)
 			var arrays: Array = mesh.surface_get_arrays(sc)
 			print("vertices: ", arrays[ArrayMesh.ARRAY_VERTEX].size())
@@ -181,6 +185,8 @@ func _ready():
 					var normal_shape = []
 					var uv_shape = []
 					for bsc in range(bshapes.size()):
+						if !rects[mesh_no][sc].has(bsc):
+							rects[mesh_no][sc][bsc] = Rect2(uv_base, Vector2())
 						index_shape.push_back(bshapes[bsc][ArrayMesh.ARRAY_INDEX][idx + t])
 						var index = index_shape[index_shape.size() - 1]
 						if index != index_base:
@@ -198,6 +204,8 @@ func _ready():
 	#								max_point[ipos] = vertex_mod[ipos] 
 						vertex_shape.push_back(vertex_mod)
 						normal_shape.push_back(normal_mod)
+						if vertex_mod.length() > 0.0001:
+							rects[mesh_no][sc][bsc] = rects[mesh_no][sc][bsc].expand(uv_base)
 						uv_shape.push_back(bshapes[bsc][ArrayMesh.ARRAY_TEX_UV][index])
 						if (uv_shape[uv_shape.size() - 1] - uv_base).length() != 0:
 							print("uv mismatch", bsc, " ", idx)
@@ -233,7 +241,7 @@ func _ready():
 			mesh_data[mesh_no][sc] += shape_names
 	pad_morphs(morphs, nshapes)
 	print(mesh_data)
-	fill_draw_data(morphs, draw_data, mesh_data, nshapes)
+	fill_draw_data(morphs, draw_data, mesh_data, nshapes, rects)
 	print("data count: ", draw_data.keys(), " ", draw_data[0].keys())
 	$gen/drawable.triangles = draw_data[0][0].triangles
 	$gen/drawable.min_point = min_point
@@ -244,7 +252,7 @@ var surface : = 0
 var shape : = 0
 var exit_delay : = 3.0
 var draw_delay : = 2.0
-func save_viewport(shape_name: String):
+func save_viewport(shape_name: String, rect: Rect2):
 	var viewport: Viewport = $gen
 	var vtex : = viewport.get_texture()
 	var tex_img : = vtex.get_data()
@@ -258,6 +266,7 @@ func save_viewport(shape_name: String):
 		maps[shape_name].image_normal_data = tex_img.duplicate(true).get_data()
 	else:
 		maps[shape_name].image_data = tex_img.duplicate(true).get_data()
+		maps[shape_name].rect = rect.grow(0.003)
 
 func _process(delta):
 	if surface == draw_data.size():
@@ -288,7 +297,7 @@ func _process(delta):
 		if draw_delay > 0:
 			draw_delay -= delta
 		else:
-			save_viewport(draw_data[surface][shape].name)
+			save_viewport(draw_data[surface][shape].name, draw_data[surface][shape].rect)
 			if $gen/drawable.normals:
 				shape += 1
 			draw_delay = 1.0
