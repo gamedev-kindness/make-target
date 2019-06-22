@@ -131,7 +131,7 @@ func fill_draw_data(morphs: Dictionary, draw_data: Dictionary, morph_names: Dict
 						tri.push_back({"uv": morphs[mesh][m][t][v].uv + dpt, "shape": morphs[mesh][m][t][v].shape[sh], "normal": morphs[mesh][m][t][v].normal[sh]})
 					draw_data[m][sh + offset].triangles.push_back(tri)
 				draw_data[m][sh + offset].rect = rects[mesh][m][sh]
-			offset += draw_data[m].keys().size()
+			offset = draw_data[m].keys().size()
 
 var common = [
 	load("res://characters/common_part1.escn"),
@@ -139,6 +139,66 @@ var common = [
 	load("res://characters/common_part3.escn"),
 	load("res://characters/common_part4.escn")
 ]
+func update_rects(arrays: Array, bshapes: Array) -> Dictionary:
+	var rects = {}
+	for idx in range(0, arrays[ArrayMesh.ARRAY_INDEX].size(), 3):
+		for t in range(3):
+			var index_base = arrays[ArrayMesh.ARRAY_INDEX][idx + t]
+			var vertex_base = arrays[ArrayMesh.ARRAY_VERTEX][index_base]
+			var normal_base = arrays[ArrayMesh.ARRAY_NORMAL][index_base]
+			var uv_base = arrays[ArrayMesh.ARRAY_TEX_UV][index_base]
+			for bsc in range(bshapes.size()):
+				if !rects.has(bsc):
+					rects[bsc] = Rect2(uv_base, Vector2())
+				var vertex_mod = bshapes[bsc][ArrayMesh.ARRAY_VERTEX][index_base] - vertex_base
+				if vertex_mod.length() > 0.0001:
+					rects[bsc] = rects[bsc].expand(uv_base)
+	return rects
+func update_triangles(arrays: Array, bshapes: Array) -> Array:
+	var triangles: Array = []
+	var ntriangles : = 0
+	var skipped : = 0
+	for idx in range(0, arrays[ArrayMesh.ARRAY_INDEX].size(), 3):
+		var verts = []
+		for t in range(3):
+			var index_base = arrays[ArrayMesh.ARRAY_INDEX][idx + t]
+			var vertex_base = arrays[ArrayMesh.ARRAY_VERTEX][index_base]
+			var normal_base = arrays[ArrayMesh.ARRAY_NORMAL][index_base]
+			var uv_base = arrays[ArrayMesh.ARRAY_TEX_UV][index_base]
+			var index_shape = []
+			var vertex_shape = []
+			var normal_shape = []
+			var uv_shape = []
+			for bsc in range(bshapes.size()):
+				index_shape.push_back(bshapes[bsc][ArrayMesh.ARRAY_INDEX][idx + t])
+				var index = index_shape[index_shape.size() - 1]
+				if index != index_base:
+					print("index mismatch", bsc, " ", index_base, " ", index)
+				var vertex_mod = bshapes[bsc][ArrayMesh.ARRAY_VERTEX][index] - vertex_base
+				var normal_mod = bshapes[bsc][ArrayMesh.ARRAY_NORMAL][index] - normal_base
+				vertex_shape.push_back(vertex_mod)
+				normal_shape.push_back(normal_mod)
+				uv_shape.push_back(bshapes[bsc][ArrayMesh.ARRAY_TEX_UV][index])
+				if (uv_shape[uv_shape.size() - 1] - uv_base).length() != 0:
+					print("uv mismatch", bsc, " ", idx)
+			var vdata = {}
+			vdata.shape = vertex_shape
+			vdata.normal = normal_shape
+			vdata.uv = uv_base
+			verts.push_back(vdata)
+		if check_triangle(verts):
+			triangles.push_back(verts)
+			ntriangles += 1
+		else:
+			skipped += 1
+	if skipped > 0:
+		print("ntriangles: ", ntriangles, " skipped: ", skipped)
+	return triangles
+func get_shape_names(mesh: ArrayMesh) -> PoolStringArray:
+	var shape_names: Array = []
+	for r in range(mesh.get_blend_shape_count()):
+		shape_names.push_back(mesh.get_blend_shape_name(r))
+	return PoolStringArray(shape_names)
 func _ready():
 	var morphs = {}
 	var mesh_data = {}
@@ -164,91 +224,67 @@ func _ready():
 		for sc in range(mesh.get_surface_count()):
 			if !morphs[mesh_no].has(sc):
 				morphs[mesh_no][sc] = []
-				mesh_data[mesh_no][sc] = []
+				mesh_data[mesh_no][sc] = PoolStringArray()
 				rects[mesh_no][sc] = {}
 			var bshapes: Array = mesh.surface_get_blend_shape_arrays(sc)
 			var arrays: Array = mesh.surface_get_arrays(sc)
 			print("vertices: ", arrays[ArrayMesh.ARRAY_VERTEX].size())
 			print("indices: ", arrays[ArrayMesh.ARRAY_INDEX].size())
 			print("surf: ", sc, " shapes: ", bshapes.size())
-			var shape_names = []
+			var shape_names : = get_shape_names(mesh)
 			nshapes[mesh_no][sc] = bshapes.size()
-			for bsc in range(bshapes.size()):
-				var shape_name = mesh.get_blend_shape_name(bsc)
-				shape_names.push_back(shape_name)
-				print("shape: ", bsc, " size: ", bshapes[bsc].size(), " name: ", mesh.get_blend_shape_name(bsc))
-				print("vertices: ", bshapes[bsc][ArrayMesh.ARRAY_VERTEX].size())
-				print("indices: ", bshapes[bsc][ArrayMesh.ARRAY_INDEX].size())
-			var triangles = []
-			for idx in range(0, arrays[ArrayMesh.ARRAY_INDEX].size(), 3):
-				var verts = []
-				for t in range(3):
-					var index_base = arrays[ArrayMesh.ARRAY_INDEX][idx + t]
-					var vertex_base = arrays[ArrayMesh.ARRAY_VERTEX][index_base]
-					var normal_base = arrays[ArrayMesh.ARRAY_NORMAL][index_base]
-					var uv_base = arrays[ArrayMesh.ARRAY_TEX_UV][index_base]
-					var index_shape = []
-					var vertex_shape = []
-					var normal_shape = []
-					var uv_shape = []
-					for bsc in range(bshapes.size()):
-						if !rects[mesh_no][sc].has(bsc):
-							rects[mesh_no][sc][bsc] = Rect2(uv_base, Vector2())
-						index_shape.push_back(bshapes[bsc][ArrayMesh.ARRAY_INDEX][idx + t])
-						var index = index_shape[index_shape.size() - 1]
-						if index != index_base:
-							print("index mismatch", bsc, " ", index_base, " ", index)
-						var vertex_mod = bshapes[bsc][ArrayMesh.ARRAY_VERTEX][index] - vertex_base
-						var normal_mod = bshapes[bsc][ArrayMesh.ARRAY_NORMAL][index] - normal_base
-	#					if idx == 0 && sc == 0 && bsc == 0:
-	#						min_point = vertex_mod
-	#						max_point = vertex_mod
-	#					else:
-	#						for ipos in range(2):
-	#							if min_point[ipos] > vertex_mod[ipos]:
-	#								min_point[ipos] = vertex_mod[ipos] 
-	#							if max_point[ipos] < vertex_mod[ipos]:
-	#								max_point[ipos] = vertex_mod[ipos] 
-						vertex_shape.push_back(vertex_mod)
-						normal_shape.push_back(normal_mod)
-						if vertex_mod.length() > 0.0001:
-							rects[mesh_no][sc][bsc] = rects[mesh_no][sc][bsc].expand(uv_base)
-						uv_shape.push_back(bshapes[bsc][ArrayMesh.ARRAY_TEX_UV][index])
-						if (uv_shape[uv_shape.size() - 1] - uv_base).length() != 0:
-							print("uv mismatch", bsc, " ", idx)
-					var vdata = {}
-					vdata.shape = vertex_shape
-					vdata.normal = normal_shape
-					vdata.uv = uv_base
-					verts.push_back(vdata)
-	#			var uv1 = verts[0].uv
-	#			var uv2 = verts[1].uv
-	#			var uv3 = verts[2].uv
-	#			var v1 = uv1 - uv3
-	#			var v2 = uv1 - uv3
-	#			if v1.length() * TEX_SIZE < 1.5:
-	#				skipped += 1
-	#				continue
-	#			if v2.length() * TEX_SIZE < 1.5:
-	#				skipped += 1
-	#				continue
-	#			var sumdata = Vector3()
-	#			for k in range(2):
-	#				for ks in range(verts[k].shape.size()):
-	#					sumdata += verts[k].shape[ks]
-	#			if sumdata.length() == 0:
-	#				skipped += 1
-	#				continue
-				if check_triangle(verts):
-					triangles.push_back(verts)
-					ntriangles += 1
-				else:
-					skipped += 1
+#			for bsc in range(bshapes.size()):
+#				var shape_name = mesh.get_blend_shape_name(bsc)
+#				shape_names.push_back(shape_name)
+#				print("shape: ", bsc, " size: ", bshapes[bsc].size(), " name: ", mesh.get_blend_shape_name(bsc))
+#				print("vertices: ", bshapes[bsc][ArrayMesh.ARRAY_VERTEX].size())
+#				print("indices: ", bshapes[bsc][ArrayMesh.ARRAY_INDEX].size())
+			rects[mesh_no][sc] = update_rects(arrays, bshapes)
+			var triangles : = update_triangles(arrays, bshapes)
+#			for idx in range(0, arrays[ArrayMesh.ARRAY_INDEX].size(), 3):
+#				var verts = []
+#				for t in range(3):
+#					var index_base = arrays[ArrayMesh.ARRAY_INDEX][idx + t]
+#					var vertex_base = arrays[ArrayMesh.ARRAY_VERTEX][index_base]
+#					var normal_base = arrays[ArrayMesh.ARRAY_NORMAL][index_base]
+#					var uv_base = arrays[ArrayMesh.ARRAY_TEX_UV][index_base]
+#					var index_shape = []
+#					var vertex_shape = []
+#					var normal_shape = []
+#					var uv_shape = []
+#					for bsc in range(bshapes.size()):
+#						if !rects[mesh_no][sc].has(bsc):
+#							rects[mesh_no][sc][bsc] = Rect2(uv_base, Vector2())
+#						index_shape.push_back(bshapes[bsc][ArrayMesh.ARRAY_INDEX][idx + t])
+#						var index = index_shape[index_shape.size() - 1]
+#						if index != index_base:
+#							print("index mismatch", bsc, " ", index_base, " ", index)
+#						var vertex_mod = bshapes[bsc][ArrayMesh.ARRAY_VERTEX][index] - vertex_base
+#						var normal_mod = bshapes[bsc][ArrayMesh.ARRAY_NORMAL][index] - normal_base
+#						vertex_shape.push_back(vertex_mod)
+#						normal_shape.push_back(normal_mod)
+#						if vertex_mod.length() > 0.0001:
+#							rects[mesh_no][sc][bsc] = rects[mesh_no][sc][bsc].expand(uv_base)
+#						uv_shape.push_back(bshapes[bsc][ArrayMesh.ARRAY_TEX_UV][index])
+#						if (uv_shape[uv_shape.size() - 1] - uv_base).length() != 0:
+#							print("uv mismatch", bsc, " ", idx)
+#					var vdata = {}
+#					vdata.shape = vertex_shape
+#					vdata.normal = normal_shape
+#					vdata.uv = uv_base
+#					verts.push_back(vdata)
+#				if check_triangle(verts):
+#					triangles.push_back(verts)
+#					ntriangles += 1
+#				else:
+#					skipped += 1
 			morphs[mesh_no][sc] += triangles
 			mesh_data[mesh_no][sc] += shape_names
 	pad_morphs(morphs, nshapes)
 	print(mesh_data)
 	fill_draw_data(morphs, draw_data, mesh_data, nshapes, rects)
+	print(nshapes, " ", draw_data[0].keys())
+	assert draw_data[0].size() >= 75
 	print("data count: ", draw_data.keys(), " ", draw_data[0].keys())
 	$gen/drawable.triangles = draw_data[0][0].triangles
 	$gen/drawable.min_point = min_point
