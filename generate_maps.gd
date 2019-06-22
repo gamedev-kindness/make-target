@@ -1,6 +1,5 @@
 extends Control
 
-var ch: Node
 const TEX_SIZE: int = 512
 var draw_data: = {}
 var min_point = Vector3()
@@ -43,18 +42,18 @@ func find_same_verts():
 				if !ok:
 					vert_indices[chdata][v1] = [index1]
 
-func find_mesh(base: Node) -> ArrayMesh:
-	var queue = [base]
-	var am: ArrayMesh
-	while queue.size() > 0:
-		var item = queue[0]
-		queue.pop_front()
-		if item is MeshInstance:
-			am = item.mesh.duplicate(true)
-			break
-		for c in item.get_children():
-			queue.push_back(c)
-	return am
+#func find_mesh(base: Node) -> ArrayMesh:
+#	var queue = [base]
+#	var am: ArrayMesh
+#	while queue.size() > 0:
+#		var item = queue[0]
+#		queue.pop_front()
+#		if item is MeshInstance:
+#			am = item.mesh.duplicate(true)
+#			break
+#		for c in item.get_children():
+#			queue.push_back(c)
+#	return am
 func find_min_max(mesh: ArrayMesh):
 	min_point = mesh.surface_get_blend_shape_arrays(0)[0][ArrayMesh.ARRAY_VERTEX][0] - mesh.surface_get_arrays(0)[ArrayMesh.ARRAY_VERTEX][0]
 	max_point = mesh.surface_get_blend_shape_arrays(0)[0][ArrayMesh.ARRAY_VERTEX][0] - mesh.surface_get_arrays(0)[ArrayMesh.ARRAY_VERTEX][0]
@@ -134,7 +133,12 @@ func fill_draw_data(morphs: Dictionary, draw_data: Dictionary, morph_names: Dict
 				draw_data[m][sh + offset].rect = rects[mesh][m][sh]
 			offset += draw_data[m].keys().size()
 
-var common = [load("res://characters/common_part1.escn"), load("res://characters/common_part2.escn")]
+var common = [
+	load("res://characters/common_part1.escn"),
+	load("res://characters/common_part2.escn"),
+	load("res://characters/common_part3.escn"),
+	load("res://characters/common_part4.escn")
+]
 func _ready():
 	var morphs = {}
 	var mesh_data = {}
@@ -143,9 +147,12 @@ func _ready():
 	for mesh_no  in range(common.size()):
 		var skipped : = 0
 		var ntriangles : = 0
-		ch = common[mesh_no].instance()
+		var ch: Node = common[mesh_no].instance()
 #		add_child(ch)
-		var mesh: ArrayMesh = find_mesh(ch)
+		var mi: MeshInstance = find_mesh_name(ch, "base")
+		if !mi:
+			return
+		var mesh: ArrayMesh = mi.mesh
 		if !mesh:
 			return
 		find_min_max(mesh)
