@@ -42,18 +42,6 @@ func find_same_verts():
 				if !ok:
 					vert_indices[chdata][v1] = [index1]
 
-#func find_mesh(base: Node) -> ArrayMesh:
-#	var queue = [base]
-#	var am: ArrayMesh
-#	while queue.size() > 0:
-#		var item = queue[0]
-#		queue.pop_front()
-#		if item is MeshInstance:
-#			am = item.mesh.duplicate(true)
-#			break
-#		for c in item.get_children():
-#			queue.push_back(c)
-#	return am
 func find_min_max(mesh: ArrayMesh):
 	min_point = mesh.surface_get_blend_shape_arrays(0)[0][ArrayMesh.ARRAY_VERTEX][0] - mesh.surface_get_arrays(0)[ArrayMesh.ARRAY_VERTEX][0]
 	max_point = mesh.surface_get_blend_shape_arrays(0)[0][ArrayMesh.ARRAY_VERTEX][0] - mesh.surface_get_arrays(0)[ArrayMesh.ARRAY_VERTEX][0]
@@ -199,14 +187,33 @@ func get_shape_names(mesh: ArrayMesh) -> PoolStringArray:
 	for r in range(mesh.get_blend_shape_count()):
 		shape_names.push_back(mesh.get_blend_shape_name(r))
 	return PoolStringArray(shape_names)
+func process_morph_meshes(mesh: ArrayMesh, morphs: Dictionary, rects: Dictionary, mesh_data: Dictionary, nshapes: Dictionary):
+	for sc in range(mesh.get_surface_count()):
+		if !morphs.has(sc):
+			morphs[sc] = []
+			mesh_data[sc] = PoolStringArray()
+			rects[sc] = {}
+		var bshapes: Array = mesh.surface_get_blend_shape_arrays(sc)
+		var arrays: Array = mesh.surface_get_arrays(sc)
+		print("vertices: ", arrays[ArrayMesh.ARRAY_VERTEX].size())
+		print("indices: ", arrays[ArrayMesh.ARRAY_INDEX].size())
+		print("surf: ", sc, " shapes: ", bshapes.size())
+		var shape_names : = get_shape_names(mesh)
+		rects[sc] = update_rects(arrays, bshapes)
+		var triangles : = update_triangles(arrays, bshapes)
+		morphs[sc] += triangles
+		mesh_data[sc] += shape_names
+		nshapes[sc] = bshapes.size()
+func extract_offsets(mesh: ArrayMesh, mesh_cloth: ArrayMesh):
+	pass
 func _ready():
 	var morphs = {}
 	var mesh_data = {}
 	var nshapes = {}
 	var rects = {}
 	for mesh_no  in range(common.size()):
-		var skipped : = 0
-		var ntriangles : = 0
+#		var skipped : = 0
+#		var ntriangles : = 0
 		var ch: Node = common[mesh_no].instance()
 #		add_child(ch)
 		var mi: MeshInstance = find_mesh_name(ch, "base")
@@ -221,70 +228,17 @@ func _ready():
 			mesh_data[mesh_no] = {}
 			nshapes[mesh_no] = {}
 			rects[mesh_no] = {}
-		for sc in range(mesh.get_surface_count()):
-			if !morphs[mesh_no].has(sc):
-				morphs[mesh_no][sc] = []
-				mesh_data[mesh_no][sc] = PoolStringArray()
-				rects[mesh_no][sc] = {}
-			var bshapes: Array = mesh.surface_get_blend_shape_arrays(sc)
-			var arrays: Array = mesh.surface_get_arrays(sc)
-			print("vertices: ", arrays[ArrayMesh.ARRAY_VERTEX].size())
-			print("indices: ", arrays[ArrayMesh.ARRAY_INDEX].size())
-			print("surf: ", sc, " shapes: ", bshapes.size())
-			var shape_names : = get_shape_names(mesh)
-			nshapes[mesh_no][sc] = bshapes.size()
-#			for bsc in range(bshapes.size()):
-#				var shape_name = mesh.get_blend_shape_name(bsc)
-#				shape_names.push_back(shape_name)
-#				print("shape: ", bsc, " size: ", bshapes[bsc].size(), " name: ", mesh.get_blend_shape_name(bsc))
-#				print("vertices: ", bshapes[bsc][ArrayMesh.ARRAY_VERTEX].size())
-#				print("indices: ", bshapes[bsc][ArrayMesh.ARRAY_INDEX].size())
-			rects[mesh_no][sc] = update_rects(arrays, bshapes)
-			var triangles : = update_triangles(arrays, bshapes)
-#			for idx in range(0, arrays[ArrayMesh.ARRAY_INDEX].size(), 3):
-#				var verts = []
-#				for t in range(3):
-#					var index_base = arrays[ArrayMesh.ARRAY_INDEX][idx + t]
-#					var vertex_base = arrays[ArrayMesh.ARRAY_VERTEX][index_base]
-#					var normal_base = arrays[ArrayMesh.ARRAY_NORMAL][index_base]
-#					var uv_base = arrays[ArrayMesh.ARRAY_TEX_UV][index_base]
-#					var index_shape = []
-#					var vertex_shape = []
-#					var normal_shape = []
-#					var uv_shape = []
-#					for bsc in range(bshapes.size()):
-#						if !rects[mesh_no][sc].has(bsc):
-#							rects[mesh_no][sc][bsc] = Rect2(uv_base, Vector2())
-#						index_shape.push_back(bshapes[bsc][ArrayMesh.ARRAY_INDEX][idx + t])
-#						var index = index_shape[index_shape.size() - 1]
-#						if index != index_base:
-#							print("index mismatch", bsc, " ", index_base, " ", index)
-#						var vertex_mod = bshapes[bsc][ArrayMesh.ARRAY_VERTEX][index] - vertex_base
-#						var normal_mod = bshapes[bsc][ArrayMesh.ARRAY_NORMAL][index] - normal_base
-#						vertex_shape.push_back(vertex_mod)
-#						normal_shape.push_back(normal_mod)
-#						if vertex_mod.length() > 0.0001:
-#							rects[mesh_no][sc][bsc] = rects[mesh_no][sc][bsc].expand(uv_base)
-#						uv_shape.push_back(bshapes[bsc][ArrayMesh.ARRAY_TEX_UV][index])
-#						if (uv_shape[uv_shape.size() - 1] - uv_base).length() != 0:
-#							print("uv mismatch", bsc, " ", idx)
-#					var vdata = {}
-#					vdata.shape = vertex_shape
-#					vdata.normal = normal_shape
-#					vdata.uv = uv_base
-#					verts.push_back(vdata)
-#				if check_triangle(verts):
-#					triangles.push_back(verts)
-#					ntriangles += 1
-#				else:
-#					skipped += 1
-			morphs[mesh_no][sc] += triangles
-			mesh_data[mesh_no][sc] += shape_names
+		process_morph_meshes(mesh, morphs[mesh_no], rects[mesh_no], mesh_data[mesh_no], nshapes[mesh_no])
+	for mesh_no  in range(common.size()):
+		var ch: Node = common[mesh_no].instance()
+		var mi: MeshInstance = find_mesh_name(ch, "base")
+		var mi_skirt: MeshInstance = find_mesh_name(ch, "skirt_helper")
+		assert mi != null && mi_skirt != null
+		var mesh: ArrayMesh = mi.mesh
+		var mesh_skirt: ArrayMesh = mi_skirt.mesh
+		extract_offsets(mesh, mesh_skirt)
 	pad_morphs(morphs, nshapes)
-	print(mesh_data)
 	fill_draw_data(morphs, draw_data, mesh_data, nshapes, rects)
-	print(nshapes, " ", draw_data[0].keys())
-	assert draw_data[0].size() >= 75
 	print("data count: ", draw_data.keys(), " ", draw_data[0].keys())
 	$gen/drawable.triangles = draw_data[0][0].triangles
 	$gen/drawable.min_point = min_point
