@@ -99,7 +99,8 @@ func update_modifier(value: float, modifier: String):
 	print(modifier, " ", val)
 	modify_mesh(orig_body_mesh, body_mi, _vert_indices)
 	for k in range(cloth_mis.size()):
-		modify_mesh(cloth_orig_meshes[k], cloth_mis[k], {})
+		if cloth_mis[k].visible:
+			modify_mesh(cloth_orig_meshes[k], cloth_mis[k], {})
 func update_slider(value: float, control: String, slider: HSlider):
 	var modifier = ""
 	if value >= 0:
