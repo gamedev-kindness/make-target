@@ -7,7 +7,7 @@ var orig_body_mesh: ArrayMesh
 var cloth_mis: Array = []
 var cloth_meshes: Array = []
 var cloth_orig_meshes: Array = []
-var cloth_names: Array = ["dress"]
+var cloth_names: Array = ["dress", "panties", "suit"]
 var min_point: Vector3 = Vector3()
 var max_point: Vector3 = Vector3()
 var min_normal: Vector3 = Vector3()
@@ -16,6 +16,13 @@ var maps = {}
 var vert_indices = {}
 var _vert_indices = {}
 var controls = {}
+
+func toggle_clothes(mi: MeshInstance, orig_mesh: ArrayMesh):
+	if !mi.visible:
+		print("mod start")
+		modify_mesh(orig_mesh, mi, {})
+		print("mod end")
+	mi.visible = !mi.visible
 
 func find_mesh(base: Node, mesh_name: String) -> MeshInstance:
 	var queue = [base]
@@ -30,7 +37,10 @@ func find_mesh(base: Node, mesh_name: String) -> MeshInstance:
 			queue.push_back(c)
 	return mi
 func modify_mesh(orig_mesh: ArrayMesh, mi: MeshInstance, v_indices: Dictionary):
-	mi.hide()
+	var should_show : = false
+	if mi.visible:
+		mi.hide()
+		should_show = true
 	mi.mesh = null
 	for k in maps.keys():
 		maps[k].image.lock()
@@ -91,7 +101,8 @@ func modify_mesh(orig_mesh: ArrayMesh, mi: MeshInstance, v_indices: Dictionary):
 		maps[k].image.unlock()
 		maps[k].image_normal.unlock()
 	mi.mesh = mod_mesh
-	mi.show()
+	if should_show:
+		mi.show()
 func update_modifier(value: float, modifier: String):
 	var val = value / 100.0
 	val = clamp(val, 0.0, 1.0)
@@ -190,13 +201,26 @@ func prepare_character(x: int) -> void:
 	_vert_indices = vert_indices[x]
 	cloth_meshes.clear()
 	cloth_mis.clear()
+	cloth_orig_meshes.clear()
+	for c in $s/VBoxContainer/clothes.get_children():
+		$s/VBoxContainer/clothes.remove_child(c)
+		c.queue_free()
+	$s/VBoxContainer/clothes.add_child(HSeparator.new())
+	var clothes_label = Label.new()
+	clothes_label.text = "Clothes"
+	$s/VBoxContainer/clothes.add_child(clothes_label)
 	for cloth in cloth_names:
 		var cloth_mi : = find_mesh(ch, cloth)
-		assert cloth_mi != null
+		if !cloth_mi:
+			continue
 		cloth_mis.push_back(cloth_mi)
 		prepare_cloth(body_mi, cloth_mi)
 		cloth_meshes.push_back(cloth_mi.mesh)
 		cloth_orig_meshes.push_back(cloth_mi.mesh.duplicate(true))
+		var cloth_button = Button.new()
+		cloth_button.text = cloth_mi.name
+		$s/VBoxContainer/clothes.add_child(cloth_button)
+		cloth_button.connect("pressed", self, "toggle_clothes", [cloth_mi, cloth_orig_meshes[cloth_orig_meshes.size() - 1]])
 func button_female():
 	prepare_character(0)
 func button_male():
