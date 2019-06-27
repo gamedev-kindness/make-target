@@ -17,6 +17,8 @@ var vert_indices = {}
 var _vert_indices = {}
 var controls = {}
 
+var helper_names : = ["skirt"]
+
 func toggle_clothes(mi: MeshInstance, orig_mesh: ArrayMesh):
 	if !mi.visible:
 		print("mod start")
@@ -257,6 +259,13 @@ func build_contols():
 			controls[cname] = {}
 			controls[cname].plus = k
 	for k in controls.keys():
+		var ok = true
+		for m in helper_names:
+			if k.begins_with(m + "_"):
+				ok = false
+				break
+		if !ok:
+			continue
 		var l = Label.new()
 		l.text = k
 		$s/VBoxContainer.add_child(l)

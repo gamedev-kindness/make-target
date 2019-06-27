@@ -1,13 +1,13 @@
 extends Control
 
 const TEX_SIZE: int = 512
-var draw_data: = {}
 var min_point = Vector3()
 var max_point = Vector3()
 var min_normal = Vector3()
 var max_normal = Vector3()
 var maps = {}
 var vert_indices = {}
+var draw_data_list : = []
 
 onready var characters = [load("res://characters/female_2018.escn"), load("res://characters/male_2018.escn")]
 
@@ -62,7 +62,7 @@ func find_min_max(mesh: ArrayMesh):
 					if max_normal[ipos] < n[ipos]:
 						max_normal[ipos] = n[ipos]
 	print("min: ", min_point, "max: ", max_point)
-func check_triangle(verts: Array) -> bool:
+static func check_triangle(verts: Array) -> bool:
 	var uv1 = verts[0].uv
 	var uv2 = verts[1].uv
 	var uv3 = verts[2].uv
@@ -79,7 +79,7 @@ func check_triangle(verts: Array) -> bool:
 	if sumdata.length() < 0.001:
 		return false
 	return true
-func pad_morphs(morphs: Dictionary, nshapes: Dictionary):
+static func pad_morphs(morphs: Dictionary, nshapes: Dictionary, min_point: Vector3, max_point: Vector3, min_normal: Vector3, max_normal: Vector3):
 	for mesh in morphs.keys():
 		for m in morphs[mesh].keys():
 			var ns = nshapes[mesh][m]
@@ -95,7 +95,7 @@ func pad_morphs(morphs: Dictionary, nshapes: Dictionary):
 							var ew = morphs[mesh][m][t][v].shape[s][u] * cd + min_point[u]
 							assert abs(ew - d) < 0.001
 							morphs[mesh][m][t][v].normal[s][u] = (morphs[mesh][m][t][v].normal[s][u] - min_normal[u]) / ncd
-func fill_draw_data(morphs: Dictionary, draw_data: Dictionary, morph_names: Dictionary, nshapes: Dictionary, rects: Dictionary):
+static func fill_draw_data(morphs: Dictionary, draw_data: Dictionary, morph_names: Dictionary, nshapes: Dictionary, rects: Dictionary):
 	var offset : = 0
 	for mesh in morphs.keys():
 		for m in morphs[mesh].keys():
@@ -127,7 +127,7 @@ var common = [
 	load("res://characters/common_part3.escn"),
 	load("res://characters/common_part4.escn")
 ]
-func update_rects(arrays: Array, bshapes: Array) -> Dictionary:
+static func update_rects(arrays: Array, bshapes: Array) -> Dictionary:
 	var rects = {}
 	for idx in range(0, arrays[ArrayMesh.ARRAY_INDEX].size(), 3):
 		for t in range(3):
@@ -142,7 +142,7 @@ func update_rects(arrays: Array, bshapes: Array) -> Dictionary:
 				if vertex_mod.length() > 0.0001:
 					rects[bsc] = rects[bsc].expand(uv_base)
 	return rects
-func update_triangles(arrays: Array, bshapes: Array) -> Array:
+static func update_triangles(arrays: Array, bshapes: Array) -> Array:
 	var triangles: Array = []
 	var ntriangles : = 0
 	var skipped : = 0
@@ -182,12 +182,12 @@ func update_triangles(arrays: Array, bshapes: Array) -> Array:
 	if skipped > 0:
 		print("ntriangles: ", ntriangles, " skipped: ", skipped)
 	return triangles
-func get_shape_names(mesh: ArrayMesh) -> PoolStringArray:
+static func get_shape_names(mesh: ArrayMesh) -> PoolStringArray:
 	var shape_names: Array = []
 	for r in range(mesh.get_blend_shape_count()):
 		shape_names.push_back(mesh.get_blend_shape_name(r))
 	return PoolStringArray(shape_names)
-func process_morph_meshes(mesh: ArrayMesh, morphs: Dictionary, rects: Dictionary, mesh_data: Dictionary, nshapes: Dictionary):
+static func process_morph_meshes(mesh: ArrayMesh, morphs: Dictionary, rects: Dictionary, mesh_data: Dictionary, nshapes: Dictionary):
 	for sc in range(mesh.get_surface_count()):
 		if !morphs.has(sc):
 			morphs[sc] = []
@@ -204,13 +204,16 @@ func process_morph_meshes(mesh: ArrayMesh, morphs: Dictionary, rects: Dictionary
 		morphs[sc] += triangles
 		mesh_data[sc] += shape_names
 		nshapes[sc] = bshapes.size()
-func extract_offsets(mesh: ArrayMesh, mesh_cloth: ArrayMesh):
-	pass
+			
 func _ready():
 	var morphs = {}
+	var morphs_helper = {}
 	var mesh_data = {}
+	var mesh_data_helper = {}
 	var nshapes = {}
 	var rects = {}
+	var rects_helper = {}
+	var nshapes_helper = {}
 	for mesh_no  in range(common.size()):
 #		var skipped : = 0
 #		var ntriangles : = 0
@@ -229,22 +232,34 @@ func _ready():
 			nshapes[mesh_no] = {}
 			rects[mesh_no] = {}
 		process_morph_meshes(mesh, morphs[mesh_no], rects[mesh_no], mesh_data[mesh_no], nshapes[mesh_no])
+	pad_morphs(morphs, nshapes, min_point, max_point, min_normal, max_normal)
 	for mesh_no  in range(common.size()):
 		var ch: Node = common[mesh_no].instance()
-		var mi: MeshInstance = find_mesh_name(ch, "base")
+#		var mi: MeshInstance = find_mesh_name(ch, "base")
 		var mi_skirt: MeshInstance = find_mesh_name(ch, "skirt_helper")
-		assert mi != null && mi_skirt != null
-		var mesh: ArrayMesh = mi.mesh
-		var mesh_skirt: ArrayMesh = mi_skirt.mesh
-		extract_offsets(mesh, mesh_skirt)
-	pad_morphs(morphs, nshapes)
+		assert mi_skirt != null
+		var mesh: ArrayMesh = mi_skirt.mesh
+#		var mesh_skirt: ArrayMesh = mi_skirt.mesh
+		morphs_helper[mesh_no] = {}
+		rects_helper[mesh_no] = {}
+		mesh_data_helper[mesh_no] = {}
+		nshapes_helper[mesh_no] = {}
+		process_morph_meshes(mesh, morphs_helper[mesh_no], rects_helper[mesh_no], mesh_data_helper[mesh_no], nshapes_helper[mesh_no])
+	pad_morphs(morphs_helper, nshapes_helper, min_point, max_point, min_normal, max_normal)
+	# TODO: combine helpers here
+	var draw_data: Dictionary = {}
 	fill_draw_data(morphs, draw_data, mesh_data, nshapes, rects)
+	draw_data_list.push_back(draw_data)
+	var draw_data_helper: Dictionary = {}
+	fill_draw_data(morphs_helper, draw_data_helper, mesh_data_helper, nshapes_helper, rects_helper)
+	draw_data_list.push_back(draw_data_helper)
 	print("data count: ", draw_data.keys(), " ", draw_data[0].keys())
 	$gen/drawable.triangles = draw_data[0][0].triangles
 	$gen/drawable.min_point = min_point
 	$gen/drawable.max_point = max_point
 	$gen/drawable.normals = false
 #	print("done ", mesh.get_surface_count(), " ", mesh.get_blend_shape_count(), " ", min_point, " ", max_point, " added: ", ntriangles, " skipped: ", skipped)
+var helper : = 0
 var surface : = 0
 var shape : = 0
 var exit_delay : = 3.0
@@ -264,48 +279,85 @@ func save_viewport(shape_name: String, rect: Rect2):
 	else:
 		maps[shape_name].image_data = tex_img.duplicate(true).get_data()
 		maps[shape_name].rect = rect.grow(0.003)
-
-func _process(delta):
-	if surface == draw_data.size():
-		if exit_delay > 0:
-			exit_delay -= delta
-			print(exit_delay)
-		else:
-			print("generating same vert indices...")
-			find_same_verts()
-			var fd = File.new()
-			fd.open("res://config.bin", File.WRITE)
-			fd.store_var(min_point)
-			fd.store_var(max_point)
-			fd.store_var(min_normal)
-			fd.store_var(max_normal)
-			fd.store_var(maps)
-			fd.store_var(vert_indices)
-			fd.close()
-			get_tree().change_scene("res://map_test.tscn")
-	elif shape == draw_data[surface].size():
-		shape = 0
-		surface += 1
-		draw_delay = 1.0
-		$gen_maps/ProgressBar.value = 100.0
+var helpers = ["", "skirt_"]
+func finish_map_gen():
+	print("generating same vert indices...")
+	find_same_verts()
+	var fd = File.new()
+	fd.open("res://config.bin", File.WRITE)
+	fd.store_var(min_point)
+	fd.store_var(max_point)
+	fd.store_var(min_normal)
+	fd.store_var(max_normal)
+	fd.store_var(maps)
+	fd.store_var(vert_indices)
+	fd.close()
+	get_tree().change_scene("res://map_test.tscn")
+func next_surface():
+	shape = 0
+	surface += 1
+	draw_delay = 1.0
+	$gen_maps/ProgressBar.value = 100.0
+	$gen/drawable.normals = false
+func next_helper():
+	shape = 0
+	surface = 0
+	draw_delay = 1.0
+	helper += 1
+	$gen/drawable.normals = false
+func setup_draw():
+	$gen/drawable.normals = !$gen/drawable.normals
+	if $gen/drawable.normals:
+		$gen/drawable.min_point = min_normal
+		$gen/drawable.max_point = max_normal
 	else:
-		$gen_maps/ProgressBar.value = 100.0 * shape / draw_data[surface].size()
-		print("value ", $gen_maps/ProgressBar.value)
-		if draw_delay > 0:
-			draw_delay -= delta
-		else:
-			save_viewport(draw_data[surface][shape].name, draw_data[surface][shape].rect)
-			if $gen/drawable.normals:
-				shape += 1
-			draw_delay = 1.0
-			print("shape ", shape)
-			if shape < draw_data[surface].size():
-				$gen/drawable.normals = !$gen/drawable.normals
-				if $gen/drawable.normals:
-					$gen/drawable.min_point = min_normal
-					$gen/drawable.max_point = max_normal
+		$gen/drawable.min_point = min_point
+		$gen/drawable.max_point = max_point
+	$gen/drawable.triangles = draw_data_list[helper][surface][shape].triangles
+	$gen/drawable.update()
+func _process(delta):
+	match(helper):
+		0:
+			if surface == draw_data_list[helper].size():
+				if exit_delay > 0:
+					exit_delay -= delta
+					print(exit_delay)
 				else:
-					$gen/drawable.min_point = min_point
-					$gen/drawable.max_point = max_point
-				$gen/drawable.triangles = draw_data[surface][shape].triangles
-				$gen/drawable.update()
+					next_helper()
+			elif shape == draw_data_list[helper][surface].size():
+				next_surface()
+			else:
+				$gen_maps/ProgressBar.value = 100.0 * shape / draw_data_list[helper][surface].size()
+				print("value ", $gen_maps/ProgressBar.value)
+				if draw_delay > 0:
+					draw_delay -= delta
+				else:
+					save_viewport(helpers[helper] + draw_data_list[helper][surface][shape].name, draw_data_list[helper][surface][shape].rect)
+					if $gen/drawable.normals:
+						shape += 1
+					draw_delay = 1.0
+					print("shape ", shape)
+					if shape < draw_data_list[helper][surface].size():
+						setup_draw()
+		1:
+			if surface == draw_data_list[helper].size():
+				if exit_delay > 0:
+					exit_delay -= delta
+					print(exit_delay)
+				else:
+					finish_map_gen()
+			elif shape == draw_data_list[helper][surface].size():
+				next_surface()
+			else:
+				$gen_maps/ProgressBar.value = 100.0 * shape / draw_data_list[helper][surface].size()
+				print("value ", $gen_maps/ProgressBar.value)
+				if draw_delay > 0:
+					draw_delay -= delta
+				else:
+					save_viewport(helpers[helper] + draw_data_list[helper][surface][shape].name, draw_data_list[helper][surface][shape].rect)
+					if $gen/drawable.normals:
+						shape += 1
+					draw_delay = 1.0
+					print("shape ", shape)
+					if shape < draw_data_list[helper][surface].size():
+						setup_draw()
