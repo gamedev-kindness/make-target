@@ -52,7 +52,7 @@ func find_min_max(mesh: ArrayMesh):
 			for index in range(arrays[ArrayMesh.ARRAY_VERTEX].size()):
 				var v: Vector3 = src[ArrayMesh.ARRAY_VERTEX][index] - arrays[ArrayMesh.ARRAY_VERTEX][index]
 				var n: Vector3 = src[ArrayMesh.ARRAY_NORMAL][index] - arrays[ArrayMesh.ARRAY_NORMAL][index]
-				for ipos in range(2):
+				for ipos in range(3):
 					if min_point[ipos] > v[ipos]:
 						min_point[ipos] = v[ipos] 
 					if max_point[ipos] < v[ipos]:
