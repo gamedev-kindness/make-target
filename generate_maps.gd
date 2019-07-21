@@ -67,7 +67,7 @@ func check_triangle(verts: Array) -> bool:
 	var uv2 = verts[1].uv
 	var uv3 = verts[2].uv
 	var v1 = uv1 - uv3
-	var v2 = uv1 - uv3
+	var v2 = uv2 - uv3
 	if v1.length() * TEX_SIZE < 1.2:
 		return false
 	if v2.length() * TEX_SIZE < 1.2:
