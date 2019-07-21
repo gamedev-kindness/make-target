@@ -236,9 +236,9 @@ func _ready():
 	for mesh_no  in range(common.size()):
 		var ch: Node = common[mesh_no].instance()
 #		var mi: MeshInstance = find_mesh_name(ch, "base")
-		var mi_skirt: MeshInstance = find_mesh_name(ch, "skirt_helper")
-		assert mi_skirt != null
-		var mesh: ArrayMesh = mi_skirt.mesh
+		var mi_robe: MeshInstance = find_mesh_name(ch, "robe_helper")
+		assert mi_robe != null
+		var mesh: ArrayMesh = mi_robe.mesh
 #		var mesh_skirt: ArrayMesh = mi_skirt.mesh
 		morphs_helper[mesh_no] = {}
 		rects_helper[mesh_no] = {}
@@ -279,7 +279,7 @@ func save_viewport(shape_name: String, rect: Rect2):
 	else:
 		maps[shape_name].image_data = tex_img.duplicate(true).get_data()
 		maps[shape_name].rect = rect.grow(0.003)
-var helpers = ["", "skirt_"]
+var helpers = ["", "robe_"]
 func finish_map_gen():
 	print("generating same vert indices...")
 	find_same_verts()

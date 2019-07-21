@@ -179,7 +179,6 @@ func prepare_cloth(body_mi: MeshInstance, cloth_mi: MeshInstance):
 				bverts.push_back(vb)
 				buvs.push_back(ub)
 			arrays_cloth[ArrayMesh.ARRAY_TEX_UV2][k] = triangulate_uv(vtx, bverts, buvs)
-	print(arrays_cloth[ArrayMesh.ARRAY_TEX_UV2])
 	var new_mesh : = ArrayMesh.new()
 	new_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays_cloth)
 	cloth_mi.mesh = new_mesh
