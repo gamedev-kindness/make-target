@@ -162,19 +162,14 @@ def main():
             with bpy.data.libraries.load(item_abspath, link=False) as (data_from, data_to):
                 data_to.objects = [name for name in data_from.objects if name == "base" or name.endswith("_helper")]
             for obj in data_to.objects:
-                 print(obj)
                  for ob in bases:
                     if obj.name.startswith(ob.name):
                          copy_shapes(obj, ob)
-#                data_to.objects = [name for name in data_from.objects if name.startswith(obj_name)]
-#                print(data_from)
-#                print(data_to)
         for ob in bpy.data.objects:
             if ob.name.endswith("_helper"):
                 ob.hide_set(False)
                 ob.hide_render = False
                 ob.hide_viewport = False
-#                ob.select_set(True)
         bpy.data.objects["base"].select_set(True)
         bpy.context.view_layer.objects.active = bpy.data.objects["base"]
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
