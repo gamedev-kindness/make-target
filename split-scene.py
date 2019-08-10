@@ -69,7 +69,7 @@ def main():
             for ob in bpy.data.objects:
                 if ob.name == "base" or ob.name.endswith("_helper"):
                     for shape_key_iter in ob.data.shape_keys.key_blocks:
-                        if not shape_key_iter.name in split_list[fn]:
+                        if not shape_key_iter.name in split_list[fn] + ["Basis"]:
                             ob.shape_key_remove(shape_key_iter)
             bpy.ops.wm.save_mainfile(filepath=os.path.join(EXPORT_DIR, fn), check_existing=False)
             out_path = os.path.join(

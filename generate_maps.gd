@@ -121,12 +121,17 @@ static func fill_draw_data(morphs: Dictionary, draw_data: Dictionary, morph_name
 				draw_data[m][sh + offset].rect = rects[mesh][m][sh]
 			offset = draw_data[m].keys().size()
 
-var common = [
-	load("res://characters/common_part1.escn"),
-	load("res://characters/common_part2.escn"),
-	load("res://characters/common_part3.escn"),
-	load("res://characters/common_part4.escn")
-]
+var common = []
+func load_data():
+	var fd = File.new()
+	fd.open("characters/data.json", File.READ)
+	var json = fd.get_as_text()
+	var json_result = JSON.parse(json)
+	var json_data = json_result.result
+	fd.close()
+	for e in json_data.files:
+		common.push_back(load("res://" + e))
+
 static func update_rects(arrays: Array, bshapes: Array) -> Dictionary:
 	var rects = {}
 	for idx in range(0, arrays[ArrayMesh.ARRAY_INDEX].size(), 3):
@@ -214,7 +219,34 @@ func _ready():
 	var rects = {}
 	var rects_helper = {}
 	var nshapes_helper = {}
-	for mesh_no  in range(common.size()):
+	load_data()
+	var base_shapes : = PoolStringArray()
+	var file_shapes = {}
+	for mesh_no in range(common.size()):
+		var ch: Node = common[mesh_no].instance()
+		var mi: MeshInstance = find_mesh_name(ch, "base")
+		var mesh: ArrayMesh = mi.mesh
+		var morph_list = get_shape_names(mesh)
+		base_shapes += morph_list
+		file_shapes[common[mesh_no].resource_path] = morph_list
+	print(file_shapes)
+	print(base_shapes)
+	for helper in ["robe_helper", "tights_helper", "skirt_helper"]:
+		var helper_shapes : = PoolStringArray()
+		for mesh_no in range(common.size()):
+			var ch: Node = common[mesh_no].instance()
+			var mi: MeshInstance = find_mesh_name(ch, helper)
+			var mesh: ArrayMesh = mi.mesh
+			var morph_list = get_shape_names(mesh)
+			helper_shapes += morph_list
+		for e in base_shapes:
+			assert e in helper_shapes
+	assert "neck_width_plus" in base_shapes
+	assert "neck_width_minus" in base_shapes
+	assert "neck_depth_plus" in base_shapes
+	assert "neck_depth_minus" in base_shapes
+		
+	for mesh_no in range(common.size()):
 #		var skipped : = 0
 #		var ntriangles : = 0
 		var ch: Node = common[mesh_no].instance()

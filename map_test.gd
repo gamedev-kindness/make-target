@@ -234,6 +234,7 @@ func _ready():
 	min_normal = fd.get_var()
 	max_normal = fd.get_var()
 	maps = fd.get_var()
+	print(maps.keys())
 	vert_indices = fd.get_var()
 	fd.close()
 	print("min: ", min_point, " max: ", max_point)
@@ -270,6 +271,7 @@ func build_contols():
 		$s/VBoxContainer.add_child(l)
 		var slider : = HSlider.new()
 		slider.rect_min_size = Vector2(180, 30)
+		print(controls[k])
 		if controls[k].plus && controls[k].minus:
 			slider.min_value = -100
 			slider.max_value = 100
