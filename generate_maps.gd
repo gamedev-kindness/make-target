@@ -229,8 +229,6 @@ func _ready():
 		var morph_list = get_shape_names(mesh)
 		base_shapes += morph_list
 		file_shapes[common[mesh_no].resource_path] = morph_list
-	print(file_shapes)
-	print(base_shapes)
 	for helper in ["robe_helper", "tights_helper", "skirt_helper"]:
 		var helper_shapes : = PoolStringArray()
 		for mesh_no in range(common.size()):
@@ -241,11 +239,7 @@ func _ready():
 			helper_shapes += morph_list
 		for e in base_shapes:
 			assert e in helper_shapes
-	assert "neck_width_plus" in base_shapes
-	assert "neck_width_minus" in base_shapes
-	assert "neck_depth_plus" in base_shapes
-	assert "neck_depth_minus" in base_shapes
-		
+
 	for mesh_no in range(common.size()):
 #		var skipped : = 0
 #		var ntriangles : = 0
